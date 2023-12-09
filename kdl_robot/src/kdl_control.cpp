@@ -32,7 +32,7 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
    // Retrieve initial ee pose
    KDL::Frame Fi =  robot_->getEEFrame();
    
-   // calculate gain matrices
+   // Calculate gain matrices
    Eigen::Matrix<double,6,6> Kp, Kd;
    Kp=Eigen::MatrixXd::Zero(6,6);
    Kd=Eigen::MatrixXd::Zero(6,6);
@@ -41,7 +41,7 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
    Kd.block(0,0,3,3) = _Kdp*Eigen::Matrix3d::Identity();
    Kd.block(3,3,3,3) = _Kdo*Eigen::Matrix3d::Identity();
 
-   // read current state
+   // Read current state
    Eigen::Matrix<double,6,7> J = robot_->getEEJacobian().data;
    Eigen::Matrix<double,7,7> I = Eigen::Matrix<double,7,7>::Identity();
    Eigen::Matrix<double,7,7> M = robot_->getJsim();
