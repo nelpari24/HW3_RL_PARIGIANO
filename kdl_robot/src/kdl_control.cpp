@@ -29,7 +29,7 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
                                       double _Kpp, double _Kpo,
                                       double _Kdp, double _Kdo)
 {
-   // // Retrieve initial ee pose
+   // Retrieve initial ee pose
    KDL::Frame Fi =  robot_->getEEFrame();
    
    // calculate gain matrices
@@ -77,13 +77,7 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
 //    // lin_acc << dot_dot_p_d + _Kdp*(dot_e_p) + _Kpp*(e_p); // assuming no friction no loads
 //    // Eigen::Matrix<double,3,3> R_sh = shCntr(lin_acc);
 
-//    // compute orientation errors
-//    Eigen::Matrix<double,3,1> e_o = computeOrientationError(R_d,R_e);
-//    Eigen::Matrix<double,3,1> dot_e_o = computeOrientationVelocityError(omega_d,
-//                                                                        omega_e,
-//                                                                        R_d,
-//                                                                        R_e);
-   
+   // compute orientation errors
    Eigen::Matrix<double,3,1> e_o_w = computeOrientationError(toEigen(Fi.M), toEigen(robot_->getEEFrame().M)); 
    Eigen::Matrix<double,3,1> e_o = computeOrientationError(R_d,R_e);
    Eigen::Matrix<double,3,1> dot_e_o = computeOrientationVelocityError(omega_d,
@@ -91,7 +85,7 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
                                                                        R_d,
                                                                        R_e);
 
-   //ERRORS                                                                  
+   //Errors                                                                 
    Eigen::Matrix<double,6,1> x_tilde;
    Eigen::Matrix<double,6,1> dot_x_tilde;
    x_tilde << e_p, e_o_w[0],e_o[1],e_o[2];
@@ -125,25 +119,15 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
 ////    std::cout << "---------------------" << std::endl;
 
    // inverse dynamics
+   //std::cout<<robot_->getJntVelocities()<<std::endl;         //TEST
 
-   //stampiamo le velocita q_dot
-   //std::cout<<robot_->getJntVelocities()<<std::endl;
+   /*APPLYING FORMULAE 4 (HW_2)*/
+   Eigen::Matrix<double,6,1> y;
+   y << dot_dot_x_d - robot_->getEEJacDotqDot() + Kd*dot_x_tilde + Kp*x_tilde;
 
-    //ci salviamo i valori di J_dot in una matrice per facilitare il prodotto
-    
-    // std::cout<<Jdot<<std::endl;
-    // std::cout<<"debug5"<<std::endl;
-
-    Eigen::Matrix<double,6,1> y;
-    y << dot_dot_x_d - robot_->getEEJacDotqDot() + Kd*dot_x_tilde + Kp*x_tilde;
-
-    //restituiamo l'ingresso di controllo u = By + n
-       return M * (Jpinv*y)+ robot_->getGravity() + robot_->getCoriolis();
-           //(I-Jpinv*J)*(/*- 10*grad */- 1*robot_->getJntVelocities())
-
-    
+   //RETURN By + n
+   return M * (Jpinv*y)+ robot_->getGravity() + robot_->getCoriolis();
 }
-
 
 Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
                                       KDL::Twist &_desVel,
@@ -154,9 +138,10 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
    
    // calculate gain matrices
    Eigen::Matrix<double,3,3> Kp, Kd;
-   Kp = _Kpp*Eigen::Matrix3d::Identity(); //costruisco la matrice 3x3 dei guadagni sull'errore di posizione
-   Kd = _Kdp*Eigen::Matrix3d::Identity();//costruisco la matrice 3x3 dei guadagni sulla derivata dell'errore di posizione
+   Kp = _Kpp*Eigen::Matrix3d::Identity();       //3x3 proportional gain matrix of position error
+   Kd = _Kdp*Eigen::Matrix3d::Identity();       //3x3 derivative gain matrix of position error
    
+   // read current state
    Eigen::Matrix<double,6,7> J = robot_->getEEJacobian().data;
    Eigen::Matrix<double,3,7> J_red = J.topRows(3);
    Eigen::Matrix<double,7,7> M = robot_->getJsim();
@@ -170,7 +155,6 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
    Eigen::Vector3d dot_p_d(_desVel.vel.data);
    Eigen::Vector3d dot_p_e(robot_->getEEVelocity().vel.data);
 
-
    // acceleration
    Eigen::Matrix<double,3,1> dot_dot_x_d;
    Eigen::Matrix<double,3,1> dot_dot_p_d(_desAcc.vel.data);
@@ -178,17 +162,22 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
    // compute linear errors
    Eigen::Matrix<double,3,1> e_p = computeLinearError(p_d,p_e);
    Eigen::Matrix<double,3,1> dot_e_p = computeLinearError(dot_p_d,dot_p_e);
-   //ERRORE                                                                    
+
+   // Errors                                                          
    Eigen::Matrix<double,3,1> x_tilde;
    Eigen::Matrix<double,3,1> dot_x_tilde;
    x_tilde << e_p;
    dot_x_tilde << dot_e_p;
    dot_dot_x_d << dot_dot_p_d;
 
-Eigen::Matrix<double,3,1> y;
+   // inverse dynamics
+   Eigen::Matrix<double,3,1> y;
 
-    y << dot_dot_x_d - robot_->getEEJacDotqDot_yellow() + Kd*dot_x_tilde + Kp*x_tilde;
-return M * (Jpinv*y)+ robot_->getGravity() + robot_->getCoriolis();
+   /*APPLYING FORMULAE 4 (HW_2)*/
+   y << dot_dot_x_d - robot_->getEEJacDotqDot_yellow() + Kd*dot_x_tilde + Kp*x_tilde;
+   
+   //RETURN By + n
+   return M * (Jpinv*y)+ robot_->getGravity() + robot_->getCoriolis();
 
 }
 
